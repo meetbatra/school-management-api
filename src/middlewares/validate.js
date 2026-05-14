@@ -1,26 +1,27 @@
+const AppError = require('../utils/AppError');
+
 const validate = (schema) => (req, res, next) => {
-  const dataToValidate = req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH' ? req.body : req.query;
+  const isBodyMethod = req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH';
+  const dataToValidate = isBodyMethod ? req.body : req.query;
+
   const result = schema.safeParse(dataToValidate);
 
   if (!result.success) {
-    const errors = result.error.issues.map(err => ({
+    const errors = result.error.issues.map((err) => ({
       field: err.path.join('.'),
       message: err.message
     }));
-    return res.status(400).json({
-      success: false,
-      message: 'Validation failed',
-      errors
-    });
+
+    return next(new AppError('Validation failed', 400, 'VALIDATION_ERROR', errors));
   }
 
-  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+  if (isBodyMethod) {
     req.body = result.data;
   } else {
     req.query = result.data;
   }
 
-  next();
+  return next();
 };
 
 module.exports = validate;
